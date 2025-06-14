@@ -61,7 +61,7 @@ const CreateCartScreen = ({ route }) => {
     });
 
     try {
-      const response = await fetch("http://192.168.1.60:5000/api/carts", {
+      const response = await fetch("http://172.20.10.7:5000/api/carts", {
         method: "POST",
         headers: {
           Authorization: token,

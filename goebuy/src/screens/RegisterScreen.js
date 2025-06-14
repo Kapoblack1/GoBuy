@@ -16,6 +16,7 @@ import {
 import { Check, PencilSimpleLine } from "phosphor-react-native";
 import avatar from "../../assets/imagens/avatar.webp";
 import { useNavigation } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 
 const { width, height } = Dimensions.get("window");
 const RegisterScreen = () => {
@@ -29,7 +30,20 @@ const RegisterScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const navigation = useNavigation();
+  const [profileImage, setProfileImage] = useState(null);
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+    }
+  };
   const handleRegister = async () => {
     // Implement registration logic here
     console.log("Register Pressed", { name, email, password, confirmPassword });
@@ -70,21 +84,34 @@ const RegisterScreen = () => {
       setIsSeller(true);
     }
 
+    const formData = new FormData();
+
+    formData.append("name", name);
+    formData.append("email", email);
+    formData.append("password", password);
+    formData.append("isSeller", isSeller);
+    formData.append("phone", phone);
+
+    // Adiciona a imagem de perfil (obrigatória)
+    const filename = profileImage.split("/").pop();
+    const match = /\.(\w+)$/.exec(filename);
+    const ext = match ? match[1] : "jpg";
+
+    formData.append("profileImage", {
+      uri: profileImage,
+      name: `profile.${ext}`,
+      type: `image/${ext}`,
+    });
+
     try {
       const response = await fetch(
-        "http://192.168.1.60:5000/api/auth/register",
+        "http://172.20.10.7:5000/api/auth/register",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "multipart/form-data",
           },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            isSeller, // ou true, se for vendedor
-            phone, // inclua o telefone se desejar
-          }),
+          body: formData,
         }
       );
 
@@ -92,7 +119,13 @@ const RegisterScreen = () => {
 
       if (response.ok) {
         alert("Registrado com sucesso!");
-        navigation.navigate("Home");
+
+        if (isSeller){
+          console.log("isSeller é true, navegando para Home1");
+          navigation.navigate("Home1");
+        } else {
+          console.log("isSeller é false, navegando para Home");
+        navigation.navigate("Home");}
       } else {
         alert(data.error || "Erro ao registrar");
       }
@@ -113,9 +146,12 @@ const RegisterScreen = () => {
         </View>
         <View style={styles.center}>
           <View style={styles.profileImageContainer}>
-            <Image source={avatar} style={styles.pfp}></Image>
+            <Image
+              source={profileImage ? { uri: profileImage } : avatar}
+              style={styles.pfp}
+            />
           </View>
-          <TouchableOpacity style={styles.editIcon}>
+          <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
             <PencilSimpleLine size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -145,8 +181,10 @@ const RegisterScreen = () => {
           />
           <View style={styles.checkboxContainer}>
             <TouchableOpacity
-              onPress={() => {setRoles({ buyer: true, seller: false })
-              setIsSeller(false);} }
+              onPress={() => {
+                setRoles({ buyer: true, seller: false });
+                setIsSeller(false);
+              }}
               style={styles.checkbox}
             >
               {roles.buyer && (

@@ -18,6 +18,7 @@ const CarrinhosScreen = ({ route }) => {
   const { namePage } = route.params;
   const [carts, setCarts] = React.useState([]);
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [seller, setSeller] = React.useState(null);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -28,8 +29,8 @@ const CarrinhosScreen = ({ route }) => {
         case "Carrinhos da SHEIN":
           platform = "Shein";
           break;
-        case "Zara":
-          platform = "Carrinhos da Zara";
+        case "Carrinhos da Zara":
+          platform = "Zara";
           break;
         case "Carrinhos da Aliexpress":
           platform = "AliExpress";
@@ -41,7 +42,7 @@ const CarrinhosScreen = ({ route }) => {
 
       try {
         const response = await fetch(
-          `http://192.168.1.60:5000/api/carts/platform/${platform}`
+          `http://172.20.10.7:5000/api/carts/platform/${platform}`
         );
         const data = await response.json();
         console.log("Dados recebidos:", data);
@@ -59,7 +60,7 @@ const CarrinhosScreen = ({ route }) => {
     // Por exemplo, navegar para uma nova tela com os detalhes do item
     console.log("Item pressionado é aqui:", item);
     console.log(namePage);
-    navigation.navigate("DetailsCarrinhos1", item);
+    navigation.navigate("DetailsCarrinhos1", {item});
     //navigation.navigate("CarrinhosScreen", {namePage});
   };
 
@@ -72,7 +73,7 @@ const CarrinhosScreen = ({ route }) => {
         <View style={styles.itemContainer}>
           <Image
             source={{
-              uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(
+              uri: `http://172.20.10.7:5000/${item.imageUrls[0].replace(
                 /\\/g,
                 "/"
               )}`,

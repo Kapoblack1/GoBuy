@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,34 +16,19 @@ import { PlusCircle, X, Star } from "phosphor-react-native";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
 
-const DetailsCarrinhoScreen1 = () => {
-  // Mock data, substitua com seus dados reais conforme necessário
+const DetailsCarrinhoScreen1 = ({ route }) => {
+  const { item } = route.params;
+  const navigation = useNavigation();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [itensCarrinho, setItensCarrinho] = useState([]);
-  const navigation = useNavigation();
   const [estimativa, setEstimativa] = useState(0);
-  const [preco, setPreco] = useState(0);
-  const carrinho = {
-    nome: "Vem Bem",
-    abertura: "12/12/2023",
-    fecho: "12/12/2023",
-    cambio: 899,
-    descricao:
-      "Carrinho de natal, todos os produtos chegam 1 semana antes do natal, aproveita.",
-    vendedor: "Romeno do Rosário",
-    avaliacao: 3, // Número de estrelas cheias
-    totalCarrinhos: "99",
-    imagemCarrinho: require("../../assets/imagens/carrinho1.png"), // Substitua pelo caminho correto da sua imagem
-    imagemVendedor: require("../../assets/imagens/james.png"), // Substitua pelo caminho correto da sua imagem
-  };
+  const [preco, setPreco] = useState("");
 
-  const fotos = [
-    { id: "1", uri: require("../../assets/imagens/carrinho1.png") },
-    { id: "2", uri: require("../../assets/imagens/carrinho2.png") },
-    { id: "3", uri: require("../../assets/imagens/carrinho3.png") },
-    // Adicione mais objetos conforme necessário
-  ];
-  // Função para renderizar as estrelas baseada na avaliação
+  useEffect(() => {
+    console.log("Item recebido:", item);
+  }, []);
+
   const renderStars = (rating) => {
     let stars = [];
     for (let i = 0; i < 5; i++) {
@@ -58,168 +43,112 @@ const DetailsCarrinhoScreen1 = () => {
     return stars;
   };
 
-  const adicionarItem = (item) => {
+  const adicionarItem = () => {
     const novoItem = {
       id: String(itensCarrinho.length + 1),
       nome: "Item 1",
-      preco: preco * carrinho.cambio,
+      preco: parseFloat(preco) * item.exchangeRate,
     };
-    setModalVisible(!modalVisible);
     setItensCarrinho([...itensCarrinho, novoItem]);
     setEstimativa(estimativa + novoItem.preco);
-  };
-
-  const nextPage = () => {
-    alert("O seu pedido foi aceite con sucesso");
-    navigation.navigate("Home");
+    setModalVisible(false);
+    setPreco("");
   };
 
   const removerItem = (id) => {
-    const itensFiltrados = itensCarrinho.filter((item) => item.id !== id);
-    setItensCarrinho(itensFiltrados);
-    calcularEstimativa(itensFiltrados);
+    const filtrados = itensCarrinho.filter((item) => item.id !== id);
+    setItensCarrinho(filtrados);
+    calcularEstimativa(filtrados);
   };
 
   const calcularEstimativa = (itens) => {
     const total = itens.reduce((soma, item) => soma + item.preco, 0);
     setEstimativa(total);
   };
+
+  const nextPage = () => {
+    alert("O seu pedido foi aceite com sucesso");
+    navigation.navigate("Home");
+  };
+
+  const imagemCarrinho =
+    item.imageUrls && item.imageUrls.length > 0
+      ? { uri: `http://<SEU_BACKEND_URL>/${item.imageUrls[0]}` }
+      : require("../../assets/imagens/carrinho1.png");
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollViewStyle}>
         <View style={styles.container}>
-          <Header page={"Carrinho Shein"}></Header>
+          <Header page={item.cartName} />
           <View style={styles.itemContainer}>
             <Image
-              source={carrinho.imagemCarrinho}
+              source={{
+                uri: `http://172.20.10.7:5000/${item.imageUrls[0].replace(
+                  /\\/g,
+                  "/"
+                )}`,
+              }}
               style={styles.itemImage}
               resizeMode="cover"
             />
             <View style={styles.itemInfo}>
-              <Text style={styles.itemTitle}>{carrinho.nome}</Text>
+              <Text style={styles.itemTitle}>{item.cartName}</Text>
               <Text style={styles.itemSpace}>
-                Abertura: {carrinho.abertura}
+                Abertura: {new Date(item.openDate).toLocaleDateString()}
               </Text>
-              <Text style={styles.itemSpace}>Fecho: {carrinho.fecho}</Text>
-              <Text style={styles.itemSpace}>Preço: {carrinho.cambio}</Text>
+              <Text style={styles.itemSpace}>
+                Fecho: {new Date(item.closeDate).toLocaleDateString()}
+              </Text>
+              <Text style={styles.itemSpace}>Câmbio: {item.exchangeRate}</Text>
             </View>
           </View>
 
           <Text style={styles.sectionTitle}>Descrição</Text>
-          <View style={styles.center}>
+          <View style={{}}>
             <View style={styles.descriptionContainer}>
-              <Text style={styles.description}>{carrinho.descricao}</Text>
+              <Text style={styles.description}>{item.description}</Text>
             </View>
           </View>
+
           <Text style={styles.sectionTitle}>Vendedor</Text>
           <View style={styles.vendedorInfo}>
-            <Image
-              source={carrinho.imagemVendedor}
-              style={styles.vendedorImage}
+           <Image
+              source={{
+                uri: `http://172.20.10.7:5000/${item.seller.profileImage.replace(
+                  /\\/g,
+                  "/"
+                )}`,
+              }}
+              style={styles.itemImage}
               resizeMode="cover"
             />
             <View style={styles.vendedorDetails}>
-              <Text style={styles.vendedorName}>{carrinho.vendedor}</Text>
-              <Text style={styles.totalCarrinhos}>
-                {carrinho.totalCarrinhos} carrinhos
-              </Text>
+              <Text style={styles.vendedorName}>{item.seller?.name}</Text>
+              <Text style={styles.totalCarrinhos}>carrinhos</Text>
               <View style={styles.starsContainer}>
-                {renderStars(carrinho.avaliacao)}
+                {renderStars(item.seller.rating || 0)}
               </View>
             </View>
           </View>
+
           <Text style={styles.sectionTitle}>Faça o seu pedido</Text>
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(!modalVisible)}
-          >
-            <View style={styles.centeredView}>
-              <View style={styles.modalView}>
-                <ScrollView style={styles.scroll}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalHeaderText}>Detalhes do item</Text>
-                    <TouchableOpacity
-                      onPress={() => setModalVisible(!modalVisible)}
-                      style={styles.closeButton}
-                    >
-                      <X size={24} color="#000" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.modalBody}>
-                    <Text style={styles.inputLabel}>Link</Text>
-                    <TextInput
-                      placeholder="shein.xpto.shoes23749846"
-                      placeholderTextColor={"#878787"}
-                      style={styles.input}
-                    />
-
-                    <Text style={styles.inputLabel}>Preço</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="18.99"
-                      placeholderTextColor={"#878787"}
-                      value={preco}
-                      onChangeText={setPreco}
-                    />
-
-                    <TouchableOpacity
-                      style={styles.addButton2}
-                      onPress={() => setModalVisible(true)}
-                    >
-                      <Text style={styles.addButtonText2}>Adicionar foto </Text>
-                      <PlusCircle
-                        size={20}
-                        color="#000"
-                        style={styles.searchIcon}
-                      />
-                    </TouchableOpacity>
-                    <FlatList
-                      horizontal
-                      data={fotos}
-                      renderItem={({ item }) => (
-                        <Image source={item.uri} style={styles.foto} />
-                      )}
-                      keyExtractor={(item) => item.id}
-                    />
-
-                    <Text style={styles.inputLabel}>Descrição</Text>
-                    <TextInput
-                      style={[styles.input, styles.descriptionInput]}
-                      multiline
-                      placeholderTextColor={"#878787"}
-                      placeholder="Adicione especificações sobre o pedido (cor, tamanho, quantidade) se achar necessário."
-                      numberOfLines={4}
-                      blurOnSubmit={true} // Adiciona esta linha
-                      onSubmitEditing={() => {}} // Adicione esta linha para esconder o teclado
-                    />
-
-                    <TouchableOpacity
-                      style={styles.orderButton1}
-                      onPress={adicionarItem}
-                    >
-                      <Text style={styles.addButtonText}>Adicionar item</Text>
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
-              </View>
-            </View>
-          </Modal>
 
           <TouchableOpacity
             style={styles.addButton1}
             onPress={() => setModalVisible(true)}
           >
-            <Text style={styles.addButtonText1}>Adicionar item </Text>
-            <PlusCircle size={24} color="#000" style={styles.searchIcon} />
+            <Text style={styles.addButtonText1}>Adicionar item</Text>
+            <PlusCircle size={24} color="#000" />
           </TouchableOpacity>
+
           {itensCarrinho.map((item) => (
             <View key={item.id} style={styles.itemCarrinhoContainer}>
               <Text style={styles.itemNome}>{item.nome}</Text>
               <View style={styles.row}>
-                <Text style={styles.itemPreco}>{item.preco.toFixed(2)}</Text>
+                <Text style={styles.itemPreco}>
+                  {item.preco.toFixed(2)} AOA
+                </Text>
                 <TouchableOpacity
                   onPress={() => removerItem(item.id)}
                   style={styles.removerItem}
@@ -230,18 +159,67 @@ const DetailsCarrinhoScreen1 = () => {
             </View>
           ))}
 
-          {/* Estimativa do total */}
           <View style={styles.estimativaContainer}>
             <Text style={styles.estimativaTexto}>Estimativa</Text>
             <Text style={styles.estimativaValor}>
               {estimativa.toFixed(2)} AOA
             </Text>
           </View>
+
           <TouchableOpacity style={styles.orderButton} onPress={nextPage}>
             <Text style={styles.orderButtonText}>Fazer Pedido</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* MODAL */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <ScrollView style={styles.scroll}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalHeaderText}>Detalhes do item</Text>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <X size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.inputLabel}>Preço</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="18.99"
+                placeholderTextColor={"#878787"}
+                value={preco}
+                onChangeText={setPreco}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.inputLabel}>Descrição</Text>
+              <TextInput
+                style={[styles.input, styles.descriptionInput]}
+                multiline
+                placeholderTextColor={"#878787"}
+                placeholder="Especificações sobre o pedido..."
+              />
+
+              <TouchableOpacity
+                style={styles.orderButton1}
+                onPress={adicionarItem}
+              >
+                <Text style={styles.addButtonText}>Adicionar item</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -313,10 +291,9 @@ const styles = StyleSheet.create({
     borderColor: "#E8E8E8",
     height: 120,
     width: "90%",
-    alignContent: "center",
-    alignItems: "center",
+    backgroundColor: "#F8F9FD",
     borderRadius: 10,
-    padding: 5,
+    padding: 16,
     paddingTop: 10,
   },
   description: {

@@ -93,7 +93,7 @@ const Home = () => {
               </ImageBackground>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={()=>nextPage("Aliexpress")}>
+          <TouchableOpacity onPress={()=>nextPage("AliExpress")}>
             <View style={styles.option}>
               <ImageBackground source={ali} style={styles.image}>
                 <View style={styles.optionDetails}>

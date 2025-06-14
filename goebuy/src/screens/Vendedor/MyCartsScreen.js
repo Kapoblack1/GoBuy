@@ -32,7 +32,7 @@ const CarrinhosScreen = () => {
           return;
         }
 
-        const response = await fetch(`http://192.168.1.60:5000/api/carts/seller/${sellerId}`);
+        const response = await fetch(`http://172.20.10.7:5000/api/carts/seller/${sellerId}`);
         const data = await response.json();
         setCarts(data);
         console.log("Carrinhos do vendedor:", data);
@@ -60,7 +60,7 @@ const CarrinhosScreen = () => {
     <View style={styles.itemContainer}>
       {item.imageUrls && item.imageUrls.length > 0 && (
         <Image
-          source={{ uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(/\\/g, "/")}` }}
+          source={{ uri: `http://172.20.10.7:5000/${item.imageUrls[0].replace(/\\/g, "/")}` }}
           style={styles.itemImage}
           resizeMode="cover"
         />
