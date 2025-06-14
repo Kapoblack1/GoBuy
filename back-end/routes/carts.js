@@ -67,7 +67,7 @@ router.post('/', authMiddleware, upload.array('images'), async (req, res) => {
 // Ver todos carrinhos abertos
 router.get('/', async (req, res) => {
   try {
-    const carts = await Cart.find().populate('seller', 'name');
+    const carts = await Cart.find().populate('seller', 'name email rating profileImage').where('isOpen', true);
     res.json(carts);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -77,7 +77,7 @@ router.get('/', async (req, res) => {
 // Ver detalhes de um carrinho
 router.get('/:id', async (req, res) => {
   try {
-    const cart = await Cart.findById(req.params.id).populate('seller', 'name');
+    const cart = await Cart.findById(req.params.id).populate('seller', 'name email rating profileImage');
     if (!cart) return res.status(404).json({ error: 'Carrinho não encontrado' });
 
     res.json(cart);
@@ -91,7 +91,7 @@ router.get('/seller/:sellerId', async (req, res) => {
   try {
     const carts = await Cart.find({
       seller: req.params.sellerId
-    }).populate('seller', 'name');
+    }).populate('seller', 'name email rating profileImage');
     res.json(carts);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -101,7 +101,7 @@ router.get('/seller/:sellerId', async (req, res) => {
 router.get('/platform/:platform', async (req, res) => {
   try {
     const platform = req.params.platform;
-    const carts = await Cart.find({ platform }).populate('seller', 'name');
+    const carts = await Cart.find({ platform }).populate('seller', 'name email rating profileImage');
     res.json(carts);
   } catch (err) {
     res.status(500).json({ error: err.message });
