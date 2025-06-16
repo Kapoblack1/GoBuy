@@ -42,7 +42,7 @@ const CarrinhosScreen = ({ route }) => {
 
       try {
         const response = await fetch(
-          `http://172.20.10.7:5000/api/carts/platform/${platform}`
+          `http://192.168.1.60:5000/api/carts/platform/${platform}`
         );
         const data = await response.json();
         console.log("Dados recebidos:", data);
@@ -73,7 +73,7 @@ const CarrinhosScreen = ({ route }) => {
         <View style={styles.itemContainer}>
           <Image
             source={{
-              uri: `http://172.20.10.7:5000/${item.imageUrls[0].replace(
+              uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(
                 /\\/g,
                 "/"
               )}`,

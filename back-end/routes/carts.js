@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 router.post('/', authMiddleware, upload.array('images'), async (req, res) => {
   try {
-    const { platform, cartName, description, exchangeRate, openDate, closeDate } = req.body;
+    const { platform, cartName, description, exchangeRate, openDate, closeDate, deliveryDate } = req.body;
 
     // Extrair caminhos das imagens salvas
     const imageUrls = req.files.map(file => file.path); // ou use `file.filename` se quiser salvar só o nome
@@ -51,7 +51,9 @@ router.post('/', authMiddleware, upload.array('images'), async (req, res) => {
       isWaitingForPayment: false,
       isWaitingForDelivery: false,
       isWaitingForRefund: false,
-      isWaitingForDispute: false
+      isWaitingForDispute: false,
+      deliveryDays: parseInt(req.body.deliveryDays) || 0, // Garantindo que deliveryDays seja um número
+      deliveryDate: deliveryDate // Convertendo para Date
     });
 
     await newCart.save();

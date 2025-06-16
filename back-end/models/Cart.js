@@ -5,6 +5,8 @@ const cartSchema = new mongoose.Schema({
   platform: { type: String, enum: ['Shein', 'AliExpress', 'Zara'], required: true },
   cartName: { type: String, required: true },
   description: { type: String },
+  deliveryDate: { type: Date, required: true },
+  deliveryDays: { type: Number, default: 0 }, // <--- alterado para Number
   imageUrls: { type: [String], required: true }, // <--- alterado para array
   avaluation: { type: Number, default: 0 },
   avaluationCount: { type: Number, default: 0 },

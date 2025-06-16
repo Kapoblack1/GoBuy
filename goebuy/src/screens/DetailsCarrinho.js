@@ -15,6 +15,10 @@ import {
 import { PlusCircle, X, Star } from "phosphor-react-native";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
+
+
+
 
 const DetailsCarrinhoScreen = () => {
   // Mock data, substitua com seus dados reais conforme necessário
@@ -22,6 +26,7 @@ const DetailsCarrinhoScreen = () => {
   const [itensCarrinho, setItensCarrinho] = useState([]);
   const navigation = useNavigation();
   const [estimativa, setEstimativa] = useState(0);
+  const [imagensSelecionadas, setImagensSelecionadas] = useState([]);
   const [preco, setPreco] = useState(0);
   const carrinho = {
     nome: "Vem Bem",
@@ -44,6 +49,30 @@ const DetailsCarrinhoScreen = () => {
     // Adicione mais objetos conforme necessário
   ];
   // Função para renderizar as estrelas baseada na avaliação
+  const escolherImagem = async () => {
+  if (imagensSelecionadas.length >= 4) {
+    alert("Você só pode adicionar até 4 imagens.");
+    return;
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 1,
+    allowsMultipleSelection: false, // expo-image-picker não permite múltiplas
+  });
+
+  if (!result.canceled) {
+    const novaImagem = { id: Date.now().toString(), uri: result.assets[0].uri };
+    setImagensSelecionadas([...imagensSelecionadas, novaImagem]);
+  }
+};
+
+const removerImagem = (id) => {
+  const novasImagens = imagensSelecionadas.filter((img) => img.id !== id);
+  setImagensSelecionadas(novasImagens);
+};
+
+
   const renderStars = (rating) => {
     let stars = [];
     for (let i = 0; i < 5; i++) {
@@ -157,6 +186,7 @@ const DetailsCarrinhoScreen = () => {
                     />
 
                     <Text style={styles.inputLabel}>Preço</Text>
+                    
                     <TextInput
                       style={styles.input}
                       placeholder="18.99"

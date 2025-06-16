@@ -15,15 +15,18 @@ import {
 import { PlusCircle, X, Star } from "phosphor-react-native";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 
 const DetailsCarrinhoScreen1 = ({ route }) => {
   const { item } = route.params;
   const navigation = useNavigation();
-
+  const [imagensSelecionadas, setImagensSelecionadas] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [itensCarrinho, setItensCarrinho] = useState([]);
   const [estimativa, setEstimativa] = useState(0);
   const [preco, setPreco] = useState("");
+  const [link, setLink] = useState("");
+  const [descricao, setDescricao] = useState("");
 
   useEffect(() => {
     console.log("Item recebido:", item);
@@ -44,15 +47,30 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
   };
 
   const adicionarItem = () => {
+    if (!link || !preco || imagensSelecionadas.length === 0) {
+      alert(
+        "Por favor, preencha todos os campos e adicione pelo menos uma imagem."
+      );
+      return;
+    }
     const novoItem = {
       id: String(itensCarrinho.length + 1),
-      nome: "Item 1",
+      nome: "Item " + (itensCarrinho.length + 1),
+      link: link,
+      imagens: imagensSelecionadas.map((img) => img.uri),
+      descricao: descricao,
+      exchangeRate: item.exchangeRate,
       preco: parseFloat(preco) * item.exchangeRate,
     };
     setItensCarrinho([...itensCarrinho, novoItem]);
     setEstimativa(estimativa + novoItem.preco);
+    setLink("");
+    setDescricao("");
+    setImagensSelecionadas([]);
+    // Fechar o modal após adicionar o item
     setModalVisible(false);
     setPreco("");
+    calcularEstimativa([...itensCarrinho, novoItem]);
   };
 
   const removerItem = (id) => {
@@ -67,24 +85,80 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
   };
 
   const nextPage = () => {
-    alert("O seu pedido foi aceite com sucesso");
-    navigation.navigate("Home");
+
+    if (itensCarrinho.length === 0) {
+      alert("Por favor, adicione pelo menos um item ao carrinho."); 
+    }
+
+   
+    // Aqui você pode enviar os dados do pedido para o servidor ou processar como necessário
+    console.log("Itens do carrinho:", itensCarrinho);
+    console.log("Estimativa:", estimativa);
+    // Navegar para a tela de pedidos
+    navigation.navigate("MyOrder", {
+      itensCarrinho: itensCarrinho,
+      estimativa: estimativa,
+      Cart : item,
+
+    });
   };
 
-  const imagemCarrinho =
-    item.imageUrls && item.imageUrls.length > 0
-      ? { uri: `http://<SEU_BACKEND_URL>/${item.imageUrls[0]}` }
-      : require("../../assets/imagens/carrinho1.png");
+  const removerImagem = (id) => {
+    const novasImagens = imagensSelecionadas.filter((img) => img.id !== id);
+    setImagensSelecionadas(novasImagens);
+  };
+
+  const escolherImagem = async () => {
+    if (imagensSelecionadas.length >= 4) {
+      alert("Você só pode adicionar até 4 imagens.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      allowsMultipleSelection: false, // expo-image-picker não permite múltiplas
+    });
+
+    if (!result.canceled) {
+      const novaImagem = {
+        id: Date.now().toString(),
+        uri: result.assets[0].uri,
+      };
+      setImagensSelecionadas([...imagensSelecionadas, novaImagem]);
+    }
+  };
+
+  const showItemDetails = (item) => {
+    // Função para mostrar detalhes do item
+    console.log("Detalhes do item:", item);
+    // Aqui você pode navegar para uma tela de detalhes ou exibir um modal
+    setModalVisible(true);
+    setLink(item.link || "");
+    setPreco(item.preco ? item.preco.toString() : "");
+    setDescricao(item.descricao || "");
+    setImagensSelecionadas(
+      item.imagens.map((uri, index) => ({ id: index.toString(), uri }))
+    );
+  };
+
+  const cleanItem = () => {
+    setLink("");
+    setPreco("");
+    setDescricao("");
+    setImagensSelecionadas([]);
+    setModalVisible(false);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollViewStyle}>
         <View style={styles.container}>
-          <Header page={item.cartName} />
+          <Header page={"Detalhes do Carrinho"} />
           <View style={styles.itemContainer}>
             <Image
               source={{
-                uri: `http://172.20.10.7:5000/${item.imageUrls[0].replace(
+                uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(
                   /\\/g,
                   "/"
                 )}`,
@@ -100,6 +174,9 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
               <Text style={styles.itemSpace}>
                 Fecho: {new Date(item.closeDate).toLocaleDateString()}
               </Text>
+              <Text style={styles.itemSpace}>
+                Tempo estimado: {new Date(item.deliveryDate).toLocaleDateString()}
+              </Text>
               <Text style={styles.itemSpace}>Câmbio: {item.exchangeRate}</Text>
             </View>
           </View>
@@ -113,9 +190,9 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
 
           <Text style={styles.sectionTitle}>Vendedor</Text>
           <View style={styles.vendedorInfo}>
-           <Image
+            <Image
               source={{
-                uri: `http://172.20.10.7:5000/${item.seller.profileImage.replace(
+                uri: `http://192.168.1.60:5000/${item.seller.profileImage.replace(
                   /\\/g,
                   "/"
                 )}`,
@@ -143,20 +220,27 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
           </TouchableOpacity>
 
           {itensCarrinho.map((item) => (
-            <View key={item.id} style={styles.itemCarrinhoContainer}>
-              <Text style={styles.itemNome}>{item.nome}</Text>
-              <View style={styles.row}>
-                <Text style={styles.itemPreco}>
-                  {item.preco.toFixed(2)} AOA
-                </Text>
-                <TouchableOpacity
-                  onPress={() => removerItem(item.id)}
-                  style={styles.removerItem}
-                >
-                  <X size={24} color="#704F38" />
-                </TouchableOpacity>
+            // Renderiza cada item do carrinho
+            <TouchableOpacity
+              onPress={() => showItemDetails(item)}
+              style={styles.itemTouchable}
+              key={item.id}
+            >
+              <View key={item.id} style={styles.itemCarrinhoContainer}>
+                <Text style={styles.itemNome}>{item.nome}</Text>
+                <View style={styles.row}>
+                  <Text style={styles.itemPreco}>
+                    {item.preco.toFixed(2)} AOA
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => removerItem(item.id)}
+                    style={styles.removerItem}
+                  >
+                    <X size={24} color="#704F38" />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
 
           <View style={styles.estimativaContainer}>
@@ -185,12 +269,40 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalHeaderText}>Detalhes do item</Text>
                 <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
+                  onPress={cleanItem}
                   style={styles.closeButton}
                 >
                   <X size={24} color="#000" />
                 </TouchableOpacity>
               </View>
+              <TouchableOpacity
+                style={styles.addButton2}
+                onPress={escolherImagem}
+              >
+                <Text style={styles.addButtonText2}>Adicionar foto </Text>
+                <PlusCircle size={20} color="#000" style={styles.searchIcon} />
+              </TouchableOpacity>
+
+              <View style={styles.imagensContainer}>
+                {imagensSelecionadas.map((item) => (
+                  <View key={item.id} style={styles.imagemWrapper}>
+                    <Image source={{ uri: item.uri }} style={styles.foto} />
+                    <TouchableOpacity
+                      onPress={() => removerImagem(item.id)}
+                      style={styles.removerIcon}
+                    >
+                      <X size={18} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              <TextInput
+                placeholder="shein.xpto.shoes23749846"
+                placeholderTextColor={"#878787"}
+                style={styles.input}
+                value={link}
+                onChangeText={setLink}
+              />
 
               <Text style={styles.inputLabel}>Preço</Text>
               <TextInput
@@ -208,6 +320,8 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
                 multiline
                 placeholderTextColor={"#878787"}
                 placeholder="Especificações sobre o pedido..."
+                value={descricao}
+                onChangeText={setDescricao}
               />
 
               <TouchableOpacity
@@ -525,6 +639,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: "Poppins_400Regular",
+  },
+  imagensContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 10,
+  },
+  imagemWrapper: {
+    position: "relative",
+  },
+  removerIcon: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "#00000088",
+    borderRadius: 10,
+    padding: 2,
+    zIndex: 1,
+  },
+  foto: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
   },
 });
 

@@ -20,26 +20,29 @@ import { useNavigation } from "@react-navigation/native";
 const CreateCartScreen = ({ route }) => {
   const { namePage } = route.params;
   const [openDate, setOpenDate] = useState(new Date());
+  const [closeDate, setCloseDate] = useState(new Date());
+  const [deliveryDate, setDeliveryDate] = useState(new Date());
   const [cartName, setCartName] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
   const [description, setDescription] = useState("");
   const navigation = useNavigation();
-  const [closeDate, setCloseDate] = useState(new Date());
   const [showOpenPicker, setShowOpenPicker] = useState(false);
   const [showClosePicker, setShowClosePicker] = useState(false);
-  const [image, setImage] = useState(null);
+  const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
+  const [deliveryDays, setDeliveryDays] = useState([]);
   const [images, setImages] = useState([]);
-  const [imageUri, setImageUri] = useState(null);
+  
 
   const handleSubmit = async () => {
     const formData = new FormData();
     const token = await AsyncStorage.getItem("token");
     console.log("Token:", token);
 
-    if (!cartName || !exchangeRate || !description || images.length === 0) {
+    if (!cartName || !exchangeRate || !description || images.length === 0 || !deliveryDate || !openDate || !closeDate) {
       alert("Preencha todos os campos e selecione ao menos uma imagem.");
       return;
     }
+ 
 
     formData.append("platform", namePage);
     formData.append("cartName", cartName);
@@ -47,6 +50,7 @@ const CreateCartScreen = ({ route }) => {
     formData.append("exchangeRate", exchangeRate);
     formData.append("openDate", openDate.toISOString());
     formData.append("closeDate", closeDate.toISOString());
+    formData.append("deliveryDate", deliveryDate.toISOString());
 
     images.forEach((uri, index) => {
       const filename = uri.split("/").pop();
@@ -61,7 +65,7 @@ const CreateCartScreen = ({ route }) => {
     });
 
     try {
-      const response = await fetch("http://172.20.10.7:5000/api/carts", {
+      const response = await fetch("http://192.168.1.60:5000/api/carts", {
         method: "POST",
         headers: {
           Authorization: token,
@@ -202,6 +206,40 @@ const CreateCartScreen = ({ route }) => {
             )}
           </View>
 
+           {/* Linha separadora */}
+
+          <View style={styles.separator} />
+            <View style={styles.inputGroup}>
+            <Text style={styles.title}>Estimativa de Entrega</Text>
+            <TouchableOpacity
+              onPress={() => setShowDeliveryPicker(true)}
+              style={styles.input}
+            >
+              <Text style={{ color: "#000" }}>
+                {deliveryDate.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+            {showDeliveryPicker && (
+              <DateTimePicker
+                value={deliveryDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  if (Platform.OS === "android") {
+                    setShowDeliveryPicker(false);
+                  }
+
+                  if (selectedDate) {
+                    setDeliveryDate(selectedDate);
+                  }
+
+                  if (Platform.OS === "ios" && event.type === "set") {
+                    setShowDeliveryPicker(false);
+                  }
+                }}
+              />
+            )}
+          </View>
           <View style={styles.inputGroup}>
             <Text style={styles.title}>Câmbio</Text>
             <TextInput
@@ -213,6 +251,11 @@ const CreateCartScreen = ({ route }) => {
               onChangeText={setExchangeRate}
             />
           </View>
+
+          {/* Linha separadora */}
+          <View style={styles.separator} />
+
+         
           <View style={styles.inputGroup}>
             <Text style={styles.title}>Imagen do Carrinho </Text>
             <TouchableOpacity style={styles.imageButton} onPress={pickImage}>
