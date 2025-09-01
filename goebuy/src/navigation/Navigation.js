@@ -19,7 +19,12 @@ import CreateCartScreen from '../screens/Vendedor/CreateCartScreen';
 import OrderScreen1 from '../screens/Vendedor/OrdersScreen';
 import MyCartsScreen from '../screens/Vendedor/MyCartsScreen';
 import MyOrder from '../screens/MyOrder';
-
+import UploadComprovativoScreen from '../screens/UploadComprovativoScreen';
+import DetailOrder from '../screens/Vendedor/DetailOrder';
+import PdfViewer from '../screens/PdfViewer';
+import AtualizarPedidoScreen from '../screens/Vendedor/AtualizarPedidoScreen';
+import FeedbackScreen from '../screens/FeedBackScreen'
+import FeedbackScreen1 from '../screens/Vendedor/FeedBackScreen';
 
 const Stack = createStackNavigator();
 
@@ -47,7 +52,13 @@ export default function Navigation() {
         <Stack.Screen name="MycartsScreen" component={MyCartsScreen} />
         <Stack.Screen name="CreateCartScreen" component={CreateCartScreen} />
         <Stack.Screen name="OrderScreen1" component={OrderScreen1} />
+        <Stack.Screen name="UploadComprovativoScreen" component={UploadComprovativoScreen} />
         <Stack.Screen name="MyOrder" component={MyOrder} />
+        <Stack.Screen name="PdfViewer" component={PdfViewer} />
+        <Stack.Screen name="DetailOrder" component={DetailOrder} />
+        <Stack.Screen name="AtualizarPedidoScreen" component={AtualizarPedidoScreen} />
+        <Stack.Screen name="FeedBackScreen" component={FeedbackScreen} />
+        <Stack.Screen name="FeedBackScreen1" component={FeedbackScreen1} />
       </Stack.Navigator>
       
       

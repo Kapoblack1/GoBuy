@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BASE_URL } from "../../config";
 import {
   View,
   Text,
@@ -31,7 +32,7 @@ const LoginScreen = () => {
     }
 
     try {
-      const response = await fetch("http://192.168.1.60:5000/api/auth/login", {
+      const response = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,7 +47,7 @@ const LoginScreen = () => {
         const token = data.token;
         await AsyncStorage.setItem("token", token);
         await AsyncStorage.setItem("userId", data.user._id);
-        alert("Login feito com sucesso!");
+        alert("Login feito com sucesso!"+data.user._id);
         console.log("data.user.isSeller home1");
 
         if (data.user.isSeller === true) {

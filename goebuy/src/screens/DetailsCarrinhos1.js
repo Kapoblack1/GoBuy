@@ -13,10 +13,11 @@ import {
   ScrollView,
 } from "react-native";
 import { PlusCircle, X, Star } from "phosphor-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-
+import { BASE_URL } from "../../config";
 const DetailsCarrinhoScreen1 = ({ route }) => {
   const { item } = route.params;
   const navigation = useNavigation();
@@ -27,6 +28,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
   const [preco, setPreco] = useState("");
   const [link, setLink] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [itemEditando, setItemEditando] = useState(null);
 
   useEffect(() => {
     console.log("Item recebido:", item);
@@ -53,24 +55,47 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
       );
       return;
     }
-    const novoItem = {
-      id: String(itensCarrinho.length + 1),
-      nome: "Item " + (itensCarrinho.length + 1),
-      link: link,
-      imagens: imagensSelecionadas.map((img) => img.uri),
-      descricao: descricao,
-      exchangeRate: item.exchangeRate,
-      preco: parseFloat(preco) * item.exchangeRate,
-    };
-    setItensCarrinho([...itensCarrinho, novoItem]);
-    setEstimativa(estimativa + novoItem.preco);
+
+    const precoFinal = parseFloat(preco) * item.exchangeRate;
+
+    if (itemEditando) {
+      // Atualização
+      const itensAtualizados = itensCarrinho.map((i) =>
+        i.id === itemEditando.id
+          ? {
+              ...i,
+              link,
+              preco: precoFinal,
+              imagens: imagensSelecionadas.map((img) => img.uri),
+              descricao,
+            }
+          : i
+      );
+      setItensCarrinho(itensAtualizados);
+      calcularEstimativa(itensAtualizados);
+    } else {
+      // Adição
+      const novoItem = {
+        id: Date.now().toString(),
+        nome: "Item " + (itensCarrinho.length + 1),
+        link,
+        imagens: imagensSelecionadas.map((img) => img.uri),
+        descricao,
+        exchangeRate: item.exchangeRate,
+        preco: precoFinal,
+      };
+      const novaLista = [...itensCarrinho, novoItem];
+      setItensCarrinho(novaLista);
+      calcularEstimativa(novaLista);
+    }
+
+    // Resetar campos
     setLink("");
     setDescricao("");
     setImagensSelecionadas([]);
-    // Fechar o modal após adicionar o item
-    setModalVisible(false);
     setPreco("");
-    calcularEstimativa([...itensCarrinho, novoItem]);
+    setItemEditando(null);
+    setModalVisible(false);
   };
 
   const removerItem = (id) => {
@@ -82,25 +107,6 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
   const calcularEstimativa = (itens) => {
     const total = itens.reduce((soma, item) => soma + item.preco, 0);
     setEstimativa(total);
-  };
-
-  const nextPage = () => {
-
-    if (itensCarrinho.length === 0) {
-      alert("Por favor, adicione pelo menos um item ao carrinho."); 
-    }
-
-   
-    // Aqui você pode enviar os dados do pedido para o servidor ou processar como necessário
-    console.log("Itens do carrinho:", itensCarrinho);
-    console.log("Estimativa:", estimativa);
-    // Navegar para a tela de pedidos
-    navigation.navigate("MyOrder", {
-      itensCarrinho: itensCarrinho,
-      estimativa: estimativa,
-      Cart : item,
-
-    });
   };
 
   const removerImagem = (id) => {
@@ -129,10 +135,87 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
     }
   };
 
+  const enviarPedido = async () => {
+    if (itensCarrinho.length === 0) {
+      alert("Por favor, adicione pelo menos um item ao carrinho.");
+      return;
+    }
+
+    const token = await AsyncStorage.getItem("token");
+    const buyerId = await AsyncStorage.getItem("userId");
+
+    if (!token || !buyerId) {
+      alert("Token ou ID de usuário não encontrado.");
+      return;
+    }
+
+    try {
+      for (let item1 of itensCarrinho) {
+        const formData = new FormData();
+        console.log("item do carrinho", item1, "\n\n");
+        console.log("ID do carro principal:", item._id);
+        console.log("ID do comprador:", buyerId);
+        console.log("Link do produto:", item1.link);
+        console.log("Preço em USD:", (item1.preco / route.params.item.exchangeRate).toFixed(2));
+        console.log("Descrição do produto:", item1.descricao);
+        console.log("Imagens do produto:", item1.imagens);
+        // Adiciona os dados do pedido ao FormData
+        formData.append("cart", item._id); // Cart ID principal
+        formData.append("buyer", buyerId);
+        formData.append("productLink", item1.link);
+        formData.append(
+          "priceUSD",
+          (item1.preco / route.params.item.exchangeRate).toFixed(2)
+        );
+        formData.append("description", item1.descricao);
+
+        item1.imagens.forEach((uri, index) => {
+          
+          const filename = uri.split("/").pop();
+          const match = /\.(\w+)$/.exec(filename);
+          const ext = match ? match[1] : "jpg";
+          console.log("URI da imagem:", uri);
+          
+          formData.append("images", {
+            uri,
+            name: `image_${index}.${ext}`,
+            type: `image/${ext}`,
+          });
+        });
+
+        const response = await fetch(`${BASE_URL}/api/orders`, {
+          method: "POST",
+          headers: {
+            Authorization: token,
+            "Content-Type": "multipart/form-data",
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          console.error("Erro ao enviar item:", text);
+          alert("Erro ao enviar item: " + text);
+          return;
+        }
+
+        const data = await response.json();
+        console.log("Item enviado com sucesso:", data);
+      }
+
+      alert("Pedido enviado com sucesso!");
+      navigation.navigate("Home");
+    } catch (error) {
+      console.error("Erro ao enviar pedido:", error);
+      alert("Erro ao enviar pedido. Tente novamente.");
+    }
+  };
+
   const showItemDetails = (item) => {
     // Função para mostrar detalhes do item
     console.log("Detalhes do item:", item);
     // Aqui você pode navegar para uma tela de detalhes ou exibir um modal
+    setItemEditando(item);
     setModalVisible(true);
     setLink(item.link || "");
     setPreco(item.preco ? item.preco.toString() : "");
@@ -147,6 +230,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
     setPreco("");
     setDescricao("");
     setImagensSelecionadas([]);
+    setItemEditando(null);
     setModalVisible(false);
   };
 
@@ -158,7 +242,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
           <View style={styles.itemContainer}>
             <Image
               source={{
-                uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(
+                uri: `${BASE_URL}/${item.imageUrls[0].replace(
                   /\\/g,
                   "/"
                 )}`,
@@ -175,7 +259,8 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
                 Fecho: {new Date(item.closeDate).toLocaleDateString()}
               </Text>
               <Text style={styles.itemSpace}>
-                Tempo estimado: {new Date(item.deliveryDate).toLocaleDateString()}
+                Tempo estimado:{" "}
+                {new Date(item.deliveryDate).toLocaleDateString()}
               </Text>
               <Text style={styles.itemSpace}>Câmbio: {item.exchangeRate}</Text>
             </View>
@@ -192,7 +277,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
           <View style={styles.vendedorInfo}>
             <Image
               source={{
-                uri: `http://192.168.1.60:5000/${item.seller.profileImage.replace(
+                uri: `${BASE_URL}/${item.seller.profileImage.replace(
                   /\\/g,
                   "/"
                 )}`,
@@ -250,7 +335,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.orderButton} onPress={nextPage}>
+          <TouchableOpacity style={styles.orderButton} onPress={enviarPedido}>
             <Text style={styles.orderButtonText}>Fazer Pedido</Text>
           </TouchableOpacity>
         </View>
@@ -311,7 +396,7 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
                 placeholderTextColor={"#878787"}
                 value={preco}
                 onChangeText={setPreco}
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
               />
 
               <Text style={styles.inputLabel}>Descrição</Text>
@@ -328,7 +413,9 @@ const DetailsCarrinhoScreen1 = ({ route }) => {
                 style={styles.orderButton1}
                 onPress={adicionarItem}
               >
-                <Text style={styles.addButtonText}>Adicionar item</Text>
+                <Text style={styles.addButtonText}>
+                  {itemEditando ? "Atualizar item" : "Adicionar item"}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>

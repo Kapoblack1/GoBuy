@@ -6,11 +6,11 @@ const orderSchema = new mongoose.Schema({
   productLink: { type: String, required: true },
   priceUSD: { type: Number, required: true },
   description: { type: String },
-  images: [{ type: String }],
+  images: { type: [String], required: true }, // <--- alterado para array
   paymentProofUrl: { type: String },
   status: {
     type: String,
-    enum: ['Pedido Feito', 'Aceite', 'Em Progresso', 'Enviado', 'Entregue'],
+    enum: ['Pedido Feito', 'Aceite', 'Em Progresso', 'Enviado', 'Entregue','Negado', 'Cancelado'],
     default: 'Pedido Feito',
   },
 });

@@ -9,8 +9,15 @@ const userSchema = new mongoose.Schema({
   rating: { type: Number, default: 0 },
   totalRatings: { type: Number, default: 0 },
   profileImage: { type: String, default: '' }, // Caminho da imagem de perfil
-  isAdmin : { type : Boolean, default : false},
-  
+  isAdmin : { type : Boolean, default : false },
+
+  // Lista de contas bancárias
+  contasBancarias: [
+    {
+      iban: { type: String, required: true },
+      banco: { type: String, required: true }
+    }
+  ]
 });
 
 module.exports = mongoose.model('User', userSchema);

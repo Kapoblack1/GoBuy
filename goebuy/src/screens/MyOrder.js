@@ -1,19 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  Modal,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
-  FlatList,
   Image,
   SafeAreaView,
-  Platform,
   ScrollView,
+  Platform,
+  StatusBar,
 } from "react-native";
 import {
-  CaretLeft,
   ChatCircleDots,
   CheckCircle,
   ClipboardText,
@@ -24,26 +21,43 @@ import {
 } from "phosphor-react-native";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
-const MyOrder = () => {
-
+import { BASE_URL } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+const MyOrder = ({ route }) => {
   const navigation = useNavigation();
+  const { cart } = route.params;
+  const [imageUrl, setImageUrl] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [seller, setSeller] = useState(null);
 
-  // Mock data, substitua com seus dados reais conforme necessário
-  const carrinho = {
-    nome: "Vem Bem",
-    abertura: "12/12/2023",
-    descricao:
-      "Carrinho de natal, todos os produtos chegam 1 semana antes do natal, aproveita.",
-    vendedor: "Romeno do Rosário",
-    avaliacao: 3, // Número de estrelas cheias
-    totalCarrinhos: "99",
-    imagemCarrinho: require("../../assets/imagens/carrinho1.png"), // Substitua pelo caminho correto da sua imagem
-    imagemVendedor: require("../../assets/imagens/james.png"), // Substitua pelo caminho correto da sua imagem
-    abertura: "10/20/2024",
-    fecho: "20/10/2024",
-    itens: 5,
-    total: 25000,
-  };
+  useEffect(() => {
+    console.log("Cart ID recebido:", cart);
+    const imageUrl = cart.imageUrls?.[0]
+      ? { uri: `${BASE_URL}/${cart.imageUrls[0].replace(/\\/g, "/")}` }
+      : require("../../assets/imagens/kratos.png");
+
+    // Fetch seller data if available
+    if (cart?.seller) {
+      console.log("Fetching seller data for:", cart.seller);
+      fetch(`${BASE_URL}/api/auth/${cart.seller}`)
+        .then((res) => res.json())
+        .then((data) => setSeller(data))
+        .catch((err) => console.error("Erro ao buscar vendedor:", err));
+    }
+
+    setSeller(cart.seller);
+    setImageUrl(imageUrl);
+  }, [cart]);
+
+  useEffect(() => {
+    // Recupera o ID do comprador do AsyncStorage
+    const fetchUserId = async () => {
+      const id = await AsyncStorage.getItem("userId");
+      setUserId(id);
+      console.log("User ID:", id);
+    };
+    fetchUserId();
+  }, []);
 
   const pedido = {
     id: "CARSH1234567",
@@ -62,87 +76,139 @@ const MyOrder = () => {
     entregue: "16/12/2023",
   };
 
+  // Mapeamento de status do BD para nosso sistema interno
+  const statusMap = {
+  "Pedido Feito": "feito",
+  "Aceite": "aceite",
+  "Em Progresso": "progresso",
+  "Enviado": "enviado",
+  "Entregue": "entregue",
+  "Negado": "negado",
+  "Cancelado": "cancelado",
+  "Fechado": "fechado" // <-- Adicionado
+};
+
+  // Supondo que você já pegou da API:
+  const buyerProgress = cart.buyerCartProgress.find(
+    (item) => item.buyer === userId
+  );
+
+  // Estado atual do pedido (convertendo do BD para nosso formato interno)
+  const currentState = statusMap[buyerProgress?.status] || "feito";
+
   const estadosPedido = [
-    {
-      nome: "feito",
-      label: "Pedido feito",
-      data: pedido.feito,
-      nextIcon: ClipboardText,
-    },
-    {
-      nome: "aceite",
-      label: "Pedido aceite",
-      data: pedido.aceite,
-      nextIcon: Handshake,
-    },
-    {
-      nome: "progresso",
-      label: "Em Progresso",
-      data: pedido.progresso,
-      nextIcon: Package,
-    },
-    {
-      nome: "enviado",
-      label: "Enviado",
-      data: pedido.enviado,
-      nextIcon: AirplaneTakeoff,
-    },
-    {
-      nome: "entregue",
-      label: "Entregue",
-      data: pedido.entregue,
-      nextIcon: Truck,
-    },
-  ];
+  { nome: "feito", label: "Pedido feito", nextIcon: ClipboardText },
+  { nome: "progresso", label: "Em Progresso", nextIcon: Package },
+  { nome: "aceite", label: "Pedido aceite", nextIcon: Handshake },
+  { nome: "enviado", label: "Enviado", nextIcon: AirplaneTakeoff },
+  { nome: "entregue", label: "Entregue", nextIcon: Truck },
+  { nome: "fechado", label: "Pedido fechado", nextIcon: CheckCircle }, // <-- Adicionado
+];
 
   const getStatusColor = (status) => {
     const orderProgress = [
       "feito",
-      "aceite",
       "progresso",
+      "aceite",
       "enviado",
       "entregue",
+      "fechado",
     ];
-    const currentIndex = orderProgress.indexOf(pedido.state);
+    const currentIndex = orderProgress.indexOf(currentState);
     const statusIndex = orderProgress.indexOf(status);
 
-    return currentIndex >= statusIndex ? "#704F38" : "#A9A9A9"; // Castanho para ativo, cinzento para inativo
+    return currentIndex >= statusIndex ? "#704F38" : "#A9A9A9";
   };
+  const isFechado =
+    cart?.buyerCartProgress?.find((p) => p.buyer === userId)?.status ===
+    "Fechado";
+
+  const calcularEstimativaChegada = (closeDate, deliveryDays) => {
+    const fechamento = new Date(closeDate);
+    fechamento.setDate(fechamento.getDate() + deliveryDays);
+    return fechamento.toLocaleDateString("pt-PT", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Status real do comprador no carrinho
+  const buyerStatus =
+    cart?.buyerCartProgress?.find(
+      (p) => p.buyer === userId // seu ID de usuário logado
+    )?.status || "Pedido Feito";
+
+  function getBuyerProgress(cart, userId) {
+    if (!cart || !cart.buyerCartProgress) {
+      console.log("Carrinho inválido ou sem progresso.");
+      return null;
+    }
+
+    const progress = cart.buyerCartProgress.find((item, i) => {
+      console.log(`Item[${i}] buyerId:`, item.buyer);
+      console.log(`Comparando com userId:`, userId);
+      return item.buyer === userId;
+    });
+
+    console.log(
+      "Progresso encontrado:",
+      progress ? progress.status : "Não encontrado"
+    );
+    return progress ? progress.status : null;
+  }
+  // Verifica se o status do buyerCartProgress é "Entregue"
+  const isEntregue =
+    cart?.buyerCartProgress?.find((p) => p.buyer === userId)?.status ===
+    "Entregue";
+
+  getBuyerProgress(cart, userId);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Header page={"Seguir Pedido"} />
       <ScrollView style={styles.scrollViewStyle}>
         <View style={styles.container}>
-          <Header page={"Seguir Pedido"}></Header>
+          {/* Info do carrinho */}
           <View style={styles.itemContainer}>
             <Image
-              source={carrinho.imagemCarrinho}
+              source={{
+                uri: `${BASE_URL}/${cart.imageUrls[0]}`.replace(/\\/g, "/"),
+              }}
               style={styles.itemImage}
-              resizeMode="cover"
             />
             <View style={styles.itemInfo}>
-              <Text style={styles.itemTitle}>{carrinho.nome}</Text>
-              <Text style={styles.itemSpace}>Itens: {carrinho.itens}</Text>
-              <Text style={styles.itemSpace}>Total: {carrinho.total} AOA</Text>
+              <Text style={styles.itemTitle}>{cart.cartName}</Text>
+              <Text style={styles.itemSpace}>Itens: {cart.itemCount}</Text>
+              <Text style={styles.itemSpace}>Total: {cart.totalPrice} AOA</Text>
             </View>
           </View>
 
+          {/* Vendedor */}
           <Text style={styles.sectionTitle}>Vendedor</Text>
           <View style={styles.vendedorInfo}>
-            <View
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
-              <Image
-                source={pedido.imagemCarrinho}
-                style={styles.vendedorImage}
-                resizeMode="cover"
-              />
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              {cart.seller.profileImage ? (
+                <Image
+                  source={{
+                    uri: `${BASE_URL}/${cart.seller.profileImage.replace(
+                      /\\/g,
+                      "/"
+                    )}`,
+                  }}
+                  style={styles.vendedorImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Image
+                  source={require("../../assets/imagens/james.png")}
+                  style={styles.vendedorImage}
+                />
+              )}
               <View style={styles.vendedorDetails}>
-                <Text style={styles.vendedorName}>{carrinho.vendedor}</Text>
+                <Text style={styles.vendedorName}>
+                  {cart.seller?.name || "Vendedor"}
+                </Text>
               </View>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate("ChatScreen")}>
@@ -150,15 +216,18 @@ const MyOrder = () => {
             </TouchableOpacity>
           </View>
 
+          {/* Detalhes */}
           <Text style={styles.sectionTitle}>Detalhes do Pedido</Text>
           <View style={styles.detailsContainer}>
             <View style={styles.detail}>
               <Text style={styles.detailText}>Estimativa de Chegada</Text>
-              <Text style={styles.detailText1}>{pedido.chegada}</Text>
+              <Text style={styles.detailText1}>
+                {calcularEstimativaChegada(cart.closeDate, cart.deliveryDays)}
+              </Text>
             </View>
             <View style={styles.detail}>
               <Text style={styles.detailText}>ID do pedido</Text>
-              <Text style={styles.detailText1}>{pedido.id}</Text>
+              <Text style={styles.detailText1}>{cart._id}</Text>
             </View>
             <View style={styles.detail}>
               <Text style={styles.detailText}>Link enviado</Text>
@@ -166,39 +235,60 @@ const MyOrder = () => {
             </View>
           </View>
 
+          {/* Status */}
           <Text style={styles.sectionTitle}>Estado do Pedido</Text>
           <View style={styles.detailsContainer1}>
-            <View style={styles.detailsContainer1}>
-              {estadosPedido.map((estado, index) => (
-                <View key={index} style={styles.state}>
-                  <View style={styles.stateDetails}>
-                    <CheckCircle
-                      weight="fill"
-                      color={getStatusColor(estado.nome)}
-                      size={40}
-                    />
-                    <View style={styles.stateText}>
-                      <Text style={styles.actualState}>{estado.label}</Text>
-                      <Text style={styles.stateDate}>{estado.data}</Text>
-                    </View>
+            {estadosPedido.map((estado, index) => (
+              <View key={index} style={styles.state}>
+                <View style={styles.stateDetails}>
+                  <CheckCircle
+                    weight="fill"
+                    color={getStatusColor(estado.nome, buyerStatus)}
+                    size={40}
+                  />
+                  <View style={styles.stateText}>
+                    <Text style={styles.actualState}>{estado.label}</Text>
+                    <Text style={styles.stateDate}>{estado.data}</Text>
                   </View>
-                  <estado.nextIcon color="#704F38" size={35} />
-                  {index < estadosPedido.length - 1 && (
-                    <View
-                      style={[
-                        styles.verticalLine,
-                        {
-                          backgroundColor: getStatusColor(
-                            estadosPedido[index + 1].nome
-                          ),
-                        },
-                      ]}
-                    />
-                  )}
                 </View>
-              ))}
-            </View>
+                <estado.nextIcon color="#704F38" size={35} />
+                {index < estadosPedido.length - 1 && (
+                  <View
+                    style={[
+                      styles.verticalLine,
+                      {
+                        backgroundColor: getStatusColor(
+                          estadosPedido[index + 1].nome,
+                          buyerStatus
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </View>
+            ))}
           </View>
+          {isEntregue && !isFechado && (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#704F38",
+                padding: 16,
+                borderRadius: 25,
+                marginVertical: 20,
+                alignItems: "center",
+              }}
+              onPress={() =>
+                navigation.navigate("FeedBackScreen", {
+                  cart,
+                  buyer: { buyerId: userId },
+                })
+              }
+            >
+              <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 16 }}>
+                Terminar Pedido
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -209,6 +299,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFF", // ou a cor de
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight || 10 : 0,
   },
   scrollViewStyle: {
     flex: 1, // Você pode remover esta linha se você já definiu flex: 1 no estilo safeArea

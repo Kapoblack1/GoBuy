@@ -16,6 +16,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import Header from "../../components/Header";
 import { useNavigation } from "@react-navigation/native";
+import { BASE_URL } from "../../../config";
 
 const CreateCartScreen = ({ route }) => {
   const { namePage } = route.params;
@@ -65,7 +66,7 @@ const CreateCartScreen = ({ route }) => {
     });
 
     try {
-      const response = await fetch("http://192.168.1.60:5000/api/carts", {
+      const response = await fetch(`${BASE_URL}/api/carts`, {
         method: "POST",
         headers: {
           Authorization: token,

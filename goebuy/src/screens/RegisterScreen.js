@@ -17,6 +17,7 @@ import { Check, PencilSimpleLine } from "phosphor-react-native";
 import avatar from "../../assets/imagens/avatar.webp";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { BASE_URL } from "../../config";
 
 const { width, height } = Dimensions.get("window");
 const RegisterScreen = () => {
@@ -31,6 +32,8 @@ const RegisterScreen = () => {
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const navigation = useNavigation();
   const [profileImage, setProfileImage] = useState(null);
+  const [contasBancarias, setContasBancarias] = useState([{ banco: "", iban: "" }]);
+
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -44,6 +47,20 @@ const RegisterScreen = () => {
       setProfileImage(result.assets[0].uri);
     }
   };
+  function addConta() {
+  setContasBancarias([...contasBancarias, { banco: "", iban: "" }]);
+
+  
+}function updateConta(index, field, value) {
+  const novas = [...contasBancarias];
+  novas[index][field] = value;
+  setContasBancarias(novas);
+}
+
+function removeConta(index) {
+  const novas = contasBancarias.filter((_, i) => i !== index);
+  setContasBancarias(novas);
+}
   const handleRegister = async () => {
     // Implement registration logic here
     console.log("Register Pressed", { name, email, password, confirmPassword });
@@ -80,9 +97,25 @@ const RegisterScreen = () => {
       alert("O email deve ter pelo menos 5 caracteres.");
       return;
     }
-    if (roles.seller === true) {
-      setIsSeller(true);
+
+    if (!profileImage) {
+      alert("Por favor, adicione uma imagem de perfil.");
+      return;
     }
+    // contas bancarias
+    if (isSeller && contasBancarias.length === 0) {
+      alert("Por favor, adicione pelo menos uma conta bancária.");
+      return;    
+    }
+    if (isSeller) {
+  for (let conta of contasBancarias) {
+    if (!conta.banco || !conta.iban) {
+      alert("Preencha todos os campos das contas bancárias.");
+      return;
+    }
+  }
+}
+
 
     const formData = new FormData();
 
@@ -91,6 +124,10 @@ const RegisterScreen = () => {
     formData.append("password", password);
     formData.append("isSeller", isSeller);
     formData.append("phone", phone);
+    // Adiciona as contas bancárias, se for vendedor
+    if (isSeller) { 
+      formData.append("contasBancarias", JSON.stringify(contasBancarias));
+    }
 
     // Adiciona a imagem de perfil (obrigatória)
     const filename = profileImage.split("/").pop();
@@ -105,7 +142,7 @@ const RegisterScreen = () => {
 
     try {
       const response = await fetch(
-        "http://172.20.10.7:5000/api/auth/register",
+        `${BASE_URL}/api/auth/register`,
         {
           method: "POST",
           headers: {
@@ -229,6 +266,38 @@ const RegisterScreen = () => {
             style={styles.input}
             secureTextEntry
           />
+
+          {isSeller && (
+  <>
+    <Text style={styles.title}>Contas Bancárias</Text>
+    {contasBancarias.map((conta, index) => (
+      <View key={index} style={{ marginBottom: 10 }}>
+        <TextInput
+          placeholder="Banco"
+          value={conta.banco}
+          onChangeText={(text) => updateConta(index, "banco", text)}
+          style={styles.input}
+        />
+        <TextInput
+          placeholder="IBAN"
+          value={conta.iban}
+          onChangeText={(text) => updateConta(index, "iban", text)}
+          style={styles.input}
+        />
+        {contasBancarias.length > 1 && (
+          <TouchableOpacity onPress={() => removeConta(index)}>
+            <Text style={{ color: "red", marginTop: 5 }}>Remover</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    ))}
+
+    <TouchableOpacity onPress={addConta}>
+      <Text style={{ color: "#007BFF", marginBottom: 15 }}>+ Adicionar outra conta</Text>
+    </TouchableOpacity>
+  </>
+)}
+
           <View style={styles.checkboxContainer}>
             <TouchableOpacity
               onPress={() => setAgreeToTerms(!agreeToTerms)}

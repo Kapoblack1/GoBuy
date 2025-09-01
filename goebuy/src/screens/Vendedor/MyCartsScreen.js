@@ -15,6 +15,7 @@ import { MagnifyingGlass } from "phosphor-react-native";
 import Header from '../../components/Header';
 import BottomNavigation from "../../components/BottomNavigation";
 import { useNavigation } from "@react-navigation/native";
+import { BASE_URL } from "../../../config";
 
 const CarrinhosScreen = () => {
   const [carts, setCarts] = useState([]);
@@ -32,7 +33,7 @@ const CarrinhosScreen = () => {
           return;
         }
 
-        const response = await fetch(`http://192.168.1.60:5000/api/carts/seller/${sellerId}`);
+        const response = await fetch(`${BASE_URL}/api/carts/seller/${sellerId}/open`);
         const data = await response.json();
         setCarts(data);
         console.log("Carrinhos do vendedor:", data);
@@ -48,7 +49,7 @@ const CarrinhosScreen = () => {
 
   const handleItemPress = (item) => {
     console.log("Item pressionado:", item);
-    navigation.navigate("OrderScreen", { cartId: item._id, cartName: item.cartName });
+    navigation.navigate("OrderScreen1", { cartId: item._id, cartName: item.cartName, cart: item });
   };
 
   const filteredCarts = carts.filter((item) =>
@@ -60,7 +61,7 @@ const CarrinhosScreen = () => {
     <View style={styles.itemContainer}>
       {item.imageUrls && item.imageUrls.length > 0 && (
         <Image
-          source={{ uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(/\\/g, "/")}` }}
+          source={{ uri: `${BASE_URL}/${item.imageUrls[0].replace(/\\/g, "/")}` }}
           style={styles.itemImage}
           resizeMode="cover"
         />
@@ -105,12 +106,11 @@ const CarrinhosScreen = () => {
               renderItem={renderItem}
               keyExtractor={(item) => item._id}
               contentContainerStyle={styles.flatListContentContainer}
-              ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 }}>Nenhum carrinho encontrado</Text>}
+              ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 , color: "black"}}>Nenhum carrinho encontrado</Text>}
             />
           )}
         </View>
       </View>
-      <BottomNavigation />
     </SafeAreaView>
   );
 };
@@ -122,6 +122,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    paddingVertical: 20,
   },
   contentContainer: {
     paddingHorizontal: 20,

@@ -22,7 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 
 const DetailsCarrinhoScreen = () => {
   // Mock data, substitua com seus dados reais conforme necessário
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalVisible, saetModalVisible] = useState(false);
   const [itensCarrinho, setItensCarrinho] = useState([]);
   const navigation = useNavigation();
   const [estimativa, setEstimativa] = useState(0);

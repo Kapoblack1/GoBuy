@@ -9,6 +9,7 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
+import { BASE_URL } from "../../config";
 import { MagnifyingGlass } from "phosphor-react-native";
 import carrinhosData from "../mocks/mocks";
 import Header from "../components/Header";
@@ -42,7 +43,7 @@ const CarrinhosScreen = ({ route }) => {
 
       try {
         const response = await fetch(
-          `http://192.168.1.60:5000/api/carts/platform/${platform}`
+          `${BASE_URL}/api/carts/platform/${platform}`
         );
         const data = await response.json();
         console.log("Dados recebidos:", data);
@@ -73,7 +74,7 @@ const CarrinhosScreen = ({ route }) => {
         <View style={styles.itemContainer}>
           <Image
             source={{
-              uri: `http://192.168.1.60:5000/${item.imageUrls[0].replace(
+              uri: `${BASE_URL}/${item.imageUrls[0].replace(
                 /\\/g,
                 "/"
               )}`,
